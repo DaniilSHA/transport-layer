@@ -1,0 +1,18 @@
+@ComponentScan({"ru.example"})
+@EnableWebMvc
+
+@Operation(summary = "ddd", description = "Customer must exist")
+@ApiResponses(value = {
+        @ApiResponse(responseCode = "400", description = "Invalid ID supplied"),
+        @ApiResponse(responseCode = "404", description = "Customer not found")})
+
+
+MALE,
+FEMALE
+
+
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.2.0</version>
+</dependency>
