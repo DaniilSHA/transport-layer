@@ -1,18 +1,68 @@
-@ComponentScan({"ru.example"})
-@EnableWebMvc
+@Configuration
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
 
-@Operation(summary = "ddd", description = "Customer must exist")
-@ApiResponses(value = {
-        @ApiResponse(responseCode = "400", description = "Invalid ID supplied"),
-        @ApiResponse(responseCode = "404", description = "Customer not found")})
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/gs-guide-websocket");
+    }
+}
+
+    @MessageMapping("/hello")
+    @SendTo("/topic/greetings")
+    public Greeting greeting(HelloMessage message) throws Exception {
+        Thread.sleep(1000); // simulated delay
+        return new Greeting("Hello, " + HtmlUtils.htmlEscape(message.getName()) + "!");
+    }
+ -----------
+
+   @Autowired
+    private SimpMessagingTemplate template;
+ -----------
+
+ template.convertAndSend("/topic/greetings", new Greeting("system worker"));
+
+ -----------
+ <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+
+ const stompClient = new StompJs.Client({
+     brokerURL: 'ws://localhost:8080/gs-guide-websocket'
+ });
+
+ stompClient.onConnect = (frame) => {
+     setConnected(true);
+     console.log('Connected: ' + frame);
+     stompClient.subscribe('/topic/greetings', (greeting) => {
+         showGreeting(JSON.parse(greeting.body).content);
+     });
+ };
+
+ stompClient.onWebSocketError = (error) => {
+     console.error('Error with websocket', error);
+ };
+
+ stompClient.onStompError = (frame) => {
+     console.error('Broker reported error: ' + frame.headers['message']);
+     console.error('Additional details: ' + frame.body);
+ };
 
 
-MALE,
-FEMALE
+ function connect() {
+     stompClient.activate();
+ }
+
+ function disconnect() {
+     stompClient.deactivate();
+ }
 
 
-<dependency>
-    <groupId>org.springdoc</groupId>
-    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    <version>2.2.0</version>
-</dependency>
+function sendName() {
+    stompClient.publish({
+        destination: "/app/hello",
+        body: JSON.stringify({'name': $("#name").val()})
+    });
+}

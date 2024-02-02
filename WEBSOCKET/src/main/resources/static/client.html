@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body id="body">
+    <div>
+        <div>
+            <label>Введите login:</label>
+            <input id="login-fld" type="text">
+        </div>
+        <div>
+            <label>Введите сообщение:</label>
+            <input id="msg-fld" type="text">
+            <button id="action-btn">Отправить</button>
+        </div>
+    </div>
+
+    <div id="msg-box"></div>
+</body>
+
+<script src="app.js"></script>
+</html>
