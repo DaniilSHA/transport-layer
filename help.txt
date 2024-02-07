@@ -1,68 +1,102 @@
-@Configuration
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
-        config.setApplicationDestinationPrefixes("/app");
+@Controller
+public class BookController {
+    @QueryMapping
+    public Book bookById(@Argument String id) {
+        return Book.getById(id);
     }
 
-    @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/gs-guide-websocket");
+    @SchemaMapping
+    public Author author(Book book) {
+        return Author.getById(book.authorId());
+    }
+
+    @MutationMapping
+    public String addBook(
+            @Argument String name,
+            @Argument int pageCount,
+            @Argument String firstNameAuthor,
+            @Argument String lastNameAuthor) {
+
+        return Book.add(name, pageCount, firstNameAuthor, lastNameAuthor);
     }
 }
 
-    @MessageMapping("/hello")
-    @SendTo("/topic/greetings")
-    public Greeting greeting(HelloMessage message) throws Exception {
-        Thread.sleep(1000); // simulated delay
-        return new Greeting("Hello, " + HtmlUtils.htmlEscape(message.getName()) + "!");
+----------------
+
+type Query {
+    bookById(id: ID): Book
+}
+
+type Mutation {
+    addBook(name: String!, pageCount: Int, firstNameAuthor: String!, lastNameAuthor: String!): ID!
+}
+
+type Book {
+    id: ID
+    name: String!
+    pageCount: Int
+    author: Author
+}
+
+type Author {
+    id: ID
+    firstName: String
+    lastName: String
+}
+
+-------------------
+
+http://localhost:8080/graphiql
+
+
+query {
+  readAllVideo{
+    id
+    title
+    tags
+    duration
+    likeCount
+    isPublish
+    author{
+      firstName
     }
- -----------
+  }
+}
 
-   @Autowired
-    private SimpMessagingTemplate template;
- -----------
+mutation {
+  createVideo(
+    title: "v1"
+    tags: ["tag1", "tag2"]
+    duration: 10
+    likeCount: 0
+    isPublish: true
+    authorFirstName: "Petr"
+    authorLastName: "Stringov"
+  )
+}
 
- template.convertAndSend("/topic/greetings", new Greeting("system worker"));
+public int getRandomNumberUsingNextInt(int min, int max) {
+    Random random = new Random();
+    return random.nextInt(max - min) + min;
+}
 
- -----------
- <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+type Subscription {
+    like: Video
+    greeting(count: Int): String
+}
 
- const stompClient = new StompJs.Client({
-     brokerURL: 'ws://localhost:8080/gs-guide-websocket'
- });
+@SubscriptionMapping
+public Flux<Video> like() {
+    return Flux.fromStream(Stream.generate(() -> 1))
+            .delayElements(Duration.ofSeconds(1))
+            .map(integer -> {
+                List<Video> videos = store.readAllVideos();
+            if (!videos.isEmpty())
+                return Optional.of(videos.get(0));
+            else
+                return Optional.<Video>empty();
+            })
+            .filter(Optional::isPresent)
+            .map(Optional::get);
 
- stompClient.onConnect = (frame) => {
-     setConnected(true);
-     console.log('Connected: ' + frame);
-     stompClient.subscribe('/topic/greetings', (greeting) => {
-         showGreeting(JSON.parse(greeting.body).content);
-     });
- };
-
- stompClient.onWebSocketError = (error) => {
-     console.error('Error with websocket', error);
- };
-
- stompClient.onStompError = (frame) => {
-     console.error('Broker reported error: ' + frame.headers['message']);
-     console.error('Additional details: ' + frame.body);
- };
-
-
- function connect() {
-     stompClient.activate();
- }
-
- function disconnect() {
-     stompClient.deactivate();
- }
-
-
-function sendName() {
-    stompClient.publish({
-        destination: "/app/hello",
-        body: JSON.stringify({'name': $("#name").val()})
-    });
 }

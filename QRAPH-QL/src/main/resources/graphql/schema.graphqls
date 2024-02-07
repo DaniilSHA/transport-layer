@@ -1,0 +1,49 @@
+type Author {
+    id: ID!,
+    firstName: String,
+    lastName: String
+}
+
+type Video {
+    id: ID!,
+    title: String,
+    tags: [String],
+    duration: Int,
+    likeCount: Int,
+    isPublish: Boolean,
+    author: Author
+}
+
+type Query {
+    readVideo(id: ID!): Video
+    readAllVideo: [Video]
+}
+
+type Mutation {
+    createVideo(
+        title: String,
+        tags: [String],
+        duration: Int,
+        likeCount: Int,
+        isPublish: Boolean,
+        authorFirstName: String,
+        authorLastName: String)
+    : ID!
+
+    updateVideo(
+        id: ID!,
+        title: String,
+        tags: [String],
+        duration: Int,
+        likeCount: Int,
+        isPublish: Boolean,
+        authorFirstName: String,
+        authorLastName: String)
+    : ID!
+
+    deleteVideo(id: ID!): ID!
+}
+
+type Subscription {
+    like: Video
+}
