@@ -1,0 +1,16 @@
+syntax="proto3";
+option java_package="org.example.grpc";
+
+message CalcRequest {
+  double a = 1;
+  double b = 2;
+  double c = 3;
+}
+
+message CalcResponse {
+  double res = 1;
+}
+
+service CalcService {
+  rpc calc(CalcRequest) returns (CalcResponse);
+}

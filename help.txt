@@ -1,102 +1,143 @@
-@Controller
-public class BookController {
-    @QueryMapping
-    public Book bookById(@Argument String id) {
-        return Book.getById(id);
+ <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty-shaded</artifactId>
+      <version>1.24.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-protobuf</artifactId>
+      <version>1.24.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-stub</artifactId>
+      <version>1.24.0</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
+      <version>1.3.1</version>
+    </dependency>
+  </dependencies>
+
+-------------------------------------
+
+ <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.6.2</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>0.6.1</version>
+        <configuration>
+          <protocArtifact>com.google.protobuf:protoc:3.9.0:exe:${os.detected.classifier}</protocArtifact>
+          <pluginId>grpc-java</pluginId>
+          <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.24.0:exe:${os.detected.classifier}</pluginArtifact>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>compile-custom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+-------------------------------------
+
+syntax="proto3";
+option java_package = "org.example.grpc";
+
+message CalcRequest{
+  double a = 1;
+  double b = 2;
+  double c = 3;
+}
+
+message CalcResponse{
+  double res = 1;
+}
+
+service CalcService{
+  rpc calc(CalcRequest) returns (CalcResponse);
+}
+
+
+--------------------------------------
+
+public class GrpcServer {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        Server server = ServerBuilder
+                .forPort(8079)
+                .addService(new HelloServiceImpl())
+                .build();
+
+        System.out.println("мы запускаемся");
+        server.start();
+        System.out.println("мы запустились");
+        server.awaitTermination();
     }
+}
 
-    @SchemaMapping
-    public Author author(Book book) {
-        return Author.getById(book.authorId());
+--------------------------------------
+
+public class GrpcClient {
+    public static void main(String[] args) {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 8079)
+                .usePlaintext()
+                .build();
+
+
+        HelloServiceGrpc.HelloServiceBlockingStub stub
+                = HelloServiceGrpc.newBlockingStub(channel);
+
+        HelloServiceOuterClass.HelloResponse helloResponse = stub.hello(HelloServiceOuterClass.HelloRequest.newBuilder()
+                .setFirstName("Baeldung")
+                .setLastName("gRPC")
+                .build());
+
+        System.out.println(helloResponse.getGreeting());
+
+        channel.shutdownNow();
     }
+}
 
-    @MutationMapping
-    public String addBook(
-            @Argument String name,
-            @Argument int pageCount,
-            @Argument String firstNameAuthor,
-            @Argument String lastNameAuthor) {
+--------------------------------
 
-        return Book.add(name, pageCount, firstNameAuthor, lastNameAuthor);
+public class HelloServiceImpl extends HelloServiceGrpc.HelloServiceImplBase {
+
+    @Override
+    public void hello(
+            HelloRequest request, StreamObserver<HelloResponse> responseObserver) {
+
+        String greeting = new StringBuilder()
+                .append("Hello, ")
+                .append(request.getFirstName())
+                .append(" ")
+                .append(request.getLastName())
+                .toString();
+
+        HelloResponse response = HelloResponse.newBuilder()
+                .setGreeting(greeting)
+                .build();
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
-}
-
-----------------
-
-type Query {
-    bookById(id: ID): Book
-}
-
-type Mutation {
-    addBook(name: String!, pageCount: Int, firstNameAuthor: String!, lastNameAuthor: String!): ID!
-}
-
-type Book {
-    id: ID
-    name: String!
-    pageCount: Int
-    author: Author
-}
-
-type Author {
-    id: ID
-    firstName: String
-    lastName: String
-}
-
--------------------
-
-http://localhost:8080/graphiql
-
-
-query {
-  readAllVideo{
-    id
-    title
-    tags
-    duration
-    likeCount
-    isPublish
-    author{
-      firstName
-    }
-  }
-}
-
-mutation {
-  createVideo(
-    title: "v1"
-    tags: ["tag1", "tag2"]
-    duration: 10
-    likeCount: 0
-    isPublish: true
-    authorFirstName: "Petr"
-    authorLastName: "Stringov"
-  )
-}
-
-public int getRandomNumberUsingNextInt(int min, int max) {
-    Random random = new Random();
-    return random.nextInt(max - min) + min;
-}
-
-type Subscription {
-    like: Video
-    greeting(count: Int): String
-}
-
-@SubscriptionMapping
-public Flux<Video> like() {
-    return Flux.fromStream(Stream.generate(() -> 1))
-            .delayElements(Duration.ofSeconds(1))
-            .map(integer -> {
-                List<Video> videos = store.readAllVideos();
-            if (!videos.isEmpty())
-                return Optional.of(videos.get(0));
-            else
-                return Optional.<Video>empty();
-            })
-            .filter(Optional::isPresent)
-            .map(Optional::get);
-
 }
